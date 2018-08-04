@@ -1,0 +1,11 @@
+# Ignore venv
+venv/
+
+# ignore data
+data/
+
+# Ignore simulation results
+simulations/
+
+# Ignore .py files
+*.py
