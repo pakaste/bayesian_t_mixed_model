@@ -9,3 +9,5 @@ simulations/
 
 # Ignore .py files
 *.py
+
+*/__pycache__
