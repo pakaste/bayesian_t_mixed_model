@@ -1,6 +1,7 @@
 class Config(object):
 
-    covariates = ['GENDER',
+    covariates = ['Age.at.blood.draw',
+                'GENDER',
                 'smoking',
                 'CD8T',
                 'CD4T',
@@ -16,7 +17,10 @@ class Config(object):
                 'PC2',
                 'PC3',
                 'PC4',
-                'PC5']
+                'PC5',
+                'family_nb']
+
+    family_id = 'family_nb'
 
     # Random effect parameters for simulation
     simulation_params = {
