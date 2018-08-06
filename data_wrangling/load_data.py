@@ -1,7 +1,9 @@
+import warnings
 import pandas as pd
 import numpy as np
 from random import randint
 from sklearn.preprocessing import OneHotEncoder
+import warnings
 
 from settings import CONFIGS as cf
 
@@ -20,10 +22,20 @@ def load_data(path='', all_cpgs=False):
 
     cpg_transpose = cpg.transpose()
 
+    # Order the data according to the barcode
+    pheno.sort_values(['Barcode'], ascending=True, inplace=True)
+    pheno.reset_index(inplace=True, drop=True)
+
+    cpg_transpose.sort_index(ascending=True, inplace=True)
+
+    # Check that both dataframes are in the same order:
+    if not (cpg_transpose.index.values == pheno['Barcode'].values).all():
+        warnings.warn('Data is not in the correct order')
+
     return cpg_transpose, pheno
 
 
-def subset_pheno(pheno_data, remove_nans=False, categorize=False):
+def subset_pheno(pheno_data, remove_nans=False, categorize=False, remove_correlated=False):
     """
         Subsets phenotype data according to the covariates and convert it to the numpy array
     """
@@ -38,7 +50,13 @@ def subset_pheno(pheno_data, remove_nans=False, categorize=False):
         subset.loc[:, 'smoking'] = [int(x) if x != '2 or 1' else '3' for x in subset['smoking'].values]
         subset = pd.get_dummies(subset, columns=['smoking'])
 
+        # Drop one column for reference
+        subset = subset.drop(columns=['smoking_0'])
+
     if remove_nans:
         subset = subset.dropna()
 
-    return np.array(subset)
+    if remove_correlated:
+        subset = subset.drop(columns=['CD4T', 'PC2_cp', 'PC5_cp'])
+
+    return subset
