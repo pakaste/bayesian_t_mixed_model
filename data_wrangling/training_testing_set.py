@@ -33,26 +33,25 @@ def divide_into_training_and_testing(X, y, family_id):
 
 def create_familial_matrix(X, family_ids):
     n = X.shape[0]
-    Z = np.zeros((n, n))
+    Z = np.zeros((n, len(family_ids)))
 
-    for famid in family_ids:
-        idxs = X.index[X['family_nb'] == famid].tolist()
+    family_indices = []
+    for i in range(len(family_ids)):
+        idxs = X.index[X['family_nb'] == family_ids[i]].tolist()
 
         try:
             id1, id2 = idxs[0], idxs[1]
-            Z[id1, id1] = 1
-            Z[id2, id2] = 1
-            Z[id1, id2] = 0.98 # np.corr(y[id1], y[id2])
-            Z[id2, id1] = 0.98
+            Z[id1, i] = 1
+            Z[id2, i] = 1
+            family_indices.append([id1, id2])
+
         except IndexError as e:
             print('IndexError: Individuals matching family id: {}'.format(len(idxs)))
             id1 = idxs[0]
-            Z[id1] = 1
+            Z[id1, i] = 1
+            family_indices.append([id1])
 
-    # Remove all zero rows from Z
-    Z[~np.all(Z == 0, axis=1)]
-
-    return Z
+    return Z, family_indices
 
 
 

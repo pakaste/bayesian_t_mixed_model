@@ -1,8 +1,8 @@
 class Config(object):
 
     covariates = ['Age.at.blood.draw',
-                'GENDER',
-                'smoking',
+                #'GENDER',
+                #'smoking',
                 'CD8T',
                 'CD4T',
                 'NK',
