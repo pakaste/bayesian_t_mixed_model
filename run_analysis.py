@@ -56,7 +56,10 @@ print('Amount of families', n_families)
 
 # Drop family column and turn X into numpy array
 X_train = X_train.drop(columns='family_nb')
+X_train.insert(0, 'Intercept', [1]*X_train.shape[0])
+X_train = X_train.iloc[:, :2]
 X_train = np.array(X_train)
+print('X_train.shape: ', X_train.shape)
 y_train = np.array(y_train)
 
 
@@ -64,10 +67,10 @@ print('\n########################################')
 print('Initializing hyperparameters')
 tau_b = 4.0
 Tau_b = 3/8
-nu_b = 2.0
+nu_b = 4.0
 
 sigma_b, s_b, b = initialize_familial_parameters(n_fam=n_families, tau_b=tau_b, Tau_b=Tau_b, nu_b=nu_b)
-plot_histogram(b, 'Ranfom effects')
+#plot_histogram(b, 'Ranfom effects')
 
 
 # The inpendent individual error term
@@ -75,9 +78,9 @@ tau_e = 4.0
 Tau_e = 1/8
 nu_e = 1.0
 
-sigma_e, s_e, scale_param = initialize_individual_parameters(n=X_train.shape[0], tau_e=tau_e, Tau_e=Tau_e, nu_e=nu_e)
-plot_histogram(s_e, 'Mixture parameter of individual error term')
-plot_histogram(scale_param, 'Scale parameter')
+sigma_e, s_e, scale_param = initialize_individual_parameters(family_indices, tau_e=tau_e, Tau_e=Tau_e, nu_e=nu_e)
+#plot_histogram(s_e, 'Mixture parameter of individual error term')
+#plot_histogram(scale_param, 'Scale parameter')
 
 
 print('\n#####################################')
@@ -85,14 +88,18 @@ print('START CALCULATING THE BLUP')
 
 print('Average variance for b: ', np.mean(sigma_b))
 print('Average variance for e: ', np.mean(sigma_e))
+print('Nonzero elements in Z:', len(Z_train.nonzero()[0]))
 
 final_estimates, updated_s_e, updated_s_u, updated_sigma_e, updated_sigma_b = estimate_BLUP(y_train, X_train, Z_train, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices, n=10000)
 
-for i in range(1, p_dim):
-    estimation = round(np.mean(final_estimates[1000:, i]), 5)
+for i in range(0, X_train.shape[1]):
+    estimation = round(np.nanmean(final_estimates[1500:, i]), 5)
     print('estimated params is {}'.format(estimation))
 
-    plt.plot(final_estimates[2000:, i])
+    plt.plot(final_estimates[1500:, i])
+    ymin = np.percentile(final_estimates[1500:, i], 5)
+    ymax = np.percentile(final_estimates[1500:, i], 95)
+    plt.ylim(ymin, ymax)
     plt.show()
 
 

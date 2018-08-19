@@ -1,6 +1,29 @@
 import numpy as np
 
 
+def initialize_parameters(n, cov_dim, initial_value, s_b, sigma_b, s_e, sigma_e):
+    # Initialize random coefficients for updating parameters
+    coefficients = np.array([initial_value]*cov_dim)
+
+    # Update variance parameters
+    updated_s_b = np.zeros(n)
+    updated_sigma_b = np.zeros(n)
+    updated_s_e = np.zeros((n, len(s_e)))
+    updated_sigma_e = np.zeros(n)
+
+    # Set the first values calculated from hyperparameters
+    updated_s_b[0] = s_b
+    updated_sigma_b[0] = sigma_b
+    updated_s_e[0, :] = s_e
+    updated_sigma_e[0] = sigma_e
+
+    # Create empty array where to save the results
+    estimates =  np.zeros(shape=(n, cov_dim))
+    estimates[0, :] = coefficients
+
+    return estimates, updated_s_b, updated_sigma_b, updated_s_e, updated_sigma_e
+
+
 def calculate_uAu(Z, u):
     Z_tranpose = np.transpose(Z)
     A = np.dot(Z_tranpose, Z)
@@ -26,6 +49,10 @@ def calculate_sse(y, X, b, Z, u):
 
     # SSE^T SSE
     sse = y - Xb - Zu
+    #mask = np.isfinite(sse)
+    indeces = np.array([i for i in range(len(sse))]).reshape(sse.shape)
+    #print('\nNot finite values: ', sse[~mask])
+    #print(indeces[~mask])
     sse_transpose = np.transpose(sse)
 
     # Take the matrix multiplication
@@ -38,6 +65,14 @@ def calculate_S_e(sigma_e, nu_e, y, X, b, Z, u):
 
     sse = calculate_sse(y, X, b, Z, u)
     scaled_sse = (sse / sigma_e) + nu_e
+
+    if np.isfinite(scaled_sse):
+        return scaled_sse
+    else:
+        print('SSE not finite:')
+        print('sse ', sse)
+        print('sigma_e: ', sigma_e)
+        print('nu_e: ', nu_e)
 
     return scaled_sse
 

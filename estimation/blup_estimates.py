@@ -10,6 +10,7 @@ from estimation.variance_parameters import estimate_s_e
 from estimation.variance_parameters import estimate_s_u
 from estimation.variance_parameters import estimate_sigma_e
 from estimation.variance_parameters import estimate_sigma_u
+from estimation.utils import initialize_parameters
 
 
 # Initialize individual error terms
@@ -20,24 +21,8 @@ def estimate_BLUP(y, X, Z, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e
     p_dim = X.shape[1]
     q_dim = Z.shape[1]
     cov_dim = p_dim + q_dim
-    coefficients = np.array([initial_value]*cov_dim)
 
-    # Update variance parameters
-    updated_s_b = np.zeros(n)
-    updated_sigma_b = np.zeros(n)
-    updated_s_e = np.zeros((n, len(s_e)))
-    updated_sigma_e = np.zeros(n)
-
-    # Set the first values calculated from hyperparameters
-    updated_s_b[0] = s_b
-    updated_sigma_b[0] = sigma_b
-    updated_s_e[0, :] = s_e
-    updated_sigma_e[0] = sigma_e
-
-    # Create empty array where to save the results
-    ncol = len(coefficients)
-    estimates =  np.zeros(shape=(n, ncol))
-    estimates[0, :] = coefficients
+    estimates, updated_s_b, updated_sigma_b, updated_s_e, updated_sigma_e =initialize_parameters(n, cov_dim, initial_value, s_b, sigma_b, s_e, sigma_e)
 
     # Start updating the parameters
     for i in range(1, estimates.shape[0]):
@@ -46,13 +31,13 @@ def estimate_BLUP(y, X, Z, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e
         coefficient_matrix, right_hand = henderson_model_equations(y, X, Z, updated_s_b[i-1], updated_sigma_b[i-1], updated_s_e[i-1], updated_sigma_e[i-1])
 
         # Update coefficients
-        for j in range(ncol):
+        for j in range(cov_dim):
             sum1 = 0
             sum2 = 0
 
             if j > 0:
                 sum1 = np.dot(coefficient_matrix[j, :j], estimates[i, :j])
-            if j < ncol-1:
+            if j < cov_dim-1:
                 sum2 = np.dot(coefficient_matrix[j, (j+1):], estimates[i-1, (j+1):])
 
             final_sum = sum1 + sum2
@@ -60,6 +45,11 @@ def estimate_BLUP(y, X, Z, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e
             # Generate mean value from Normal distribution
             a_worm_i = (1/coefficient_matrix[j, j]) * (right_hand[j] - final_sum)
             scale = np.sqrt((1/coefficient_matrix[j, j]))
+
+            if scale < 0:
+                print('\nScale is negative')
+                print('i= ', i)
+                break
 
             estimates[i, j] = np.random.normal(loc=a_worm_i, scale=scale)
 
@@ -71,12 +61,15 @@ def estimate_BLUP(y, X, Z, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e
 
         # Update s_u
         updated_s_b[i] = estimate_s_u(Z, estimates[i, p_dim:], updated_sigma_b[i-1], nu_b)
+        #print('\nupdated_s_b[i]: ', updated_s_b[i])
 
         # Update sigma_e
         updated_sigma_e[i] = estimate_sigma_e(updated_s_e[i-1, :], y, X, estimates[i, :p_dim], Z, estimates[i, p_dim:], tau_e, Tau_e, family_indices)
+        #print('updated_sigma_e[i]: ', updated_sigma_e[i])
 
         # Update Sigma_b
         updated_sigma_b[i] = estimate_sigma_u(updated_s_b[i-1], y, X, estimates[i, :p_dim], Z, estimates[i, p_dim:], tau_b, Tau_b)
+        #print('updated_sigma_b[i]: ', updated_sigma_b[i])
 
 
-    return estimates, updated_s_e, updated_s_u, updated_sigma_e, updated_sigma_b
+    return estimates, updated_s_e, updated_s_b, updated_sigma_e, updated_sigma_b

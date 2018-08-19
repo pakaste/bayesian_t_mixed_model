@@ -46,7 +46,7 @@ def estimate_s_u(Z, u, sigma_u, nu_u):
         Generates s_u for each familial random effect.
     """
     df = nu_u + Z.shape[1]
-    scaler = calculate_covariance_u(Z, u, sigma_u, nu_u)
+    scaler = calculate_covariance_u(Z.copy(), u.copy(), sigma_u, nu_u)
     s_u_estimate = chisquare(df) / scaler
 
     return s_u_estimate
@@ -58,12 +58,15 @@ def estimate_sigma_e(s_e, y, X, b, Z, u, tau_e, Tau_e, family_indices):
     """
 
     S_t = 0
+    y_copy = y.copy()
+    X_copy = X.copy()
+    Z_copy = Z.copy()
     for family_ind in family_indices:
 
         # Calculate the S_t for every group m separately
-        y_subset = np.squeeze(y[family_ind])
-        X_subset = X[family_ind]
-        Z_subset = Z[family_ind]
+        y_subset = np.squeeze(y_copy[family_ind])
+        X_subset = X_copy[family_ind]
+        Z_subset = Z_copy[family_ind]
         s_e_i = s_e[family_ind][0]
 
         group_m_S_t = calculate_sum(s_e_i, y_subset, X_subset, b, Z_subset, u)
@@ -78,7 +81,7 @@ def estimate_sigma_e(s_e, y, X, b, Z, u, tau_e, Tau_e, family_indices):
 
 
 def estimate_sigma_u(s_u, y, X, b, Z, u, tau_u, Tau_u):
-    covariance_u = calculate_uAu(Z, u)
+    covariance_u = calculate_uAu(Z.copy(), u.copy())
     nominator = (tau_u*Tau_u + s_u*covariance_u)
 
     df = tau_u + Z.shape[1]
