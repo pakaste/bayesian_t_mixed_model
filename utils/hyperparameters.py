@@ -2,12 +2,12 @@ import numpy as np
 from utils.inverse_chisquare_distribution import inverse_chisquare
 
 
-def initialize_individual_parameters(n, tau_e=1.0, Tau_e=0.01, nu_e=2.0):
+def initialize_individual_parameters(family_indices, tau_e=1.0, Tau_e=0.01, nu_e=2.0):
     """
         Function to initialize individual parameters based on hyperparameters tau_e, Tau_e and degrees of freedom nu_e
 
         Parameters:
-            n     : (int) amount of observations
+            n     : (int) amount of families (random effects)
             tau_b : (float)
             Tau_b : (float)
             nu_b  : (float) degrees of freedom
@@ -17,12 +17,11 @@ def initialize_individual_parameters(n, tau_e=1.0, Tau_e=0.01, nu_e=2.0):
     # The inpendent individual error term
     sigma_e = inverse_chisquare(df=tau_e, scale=Tau_e, size=1, scaled_inverse=True)
 
-    s_e = np.zeros(shape=n)
+    s_e = np.zeros(shape=len(family_indices))
     i = 0
-    while (i <= n):
+    for family_ind in list(set(family_indices)):
         mix_param = np.random.chisquare(df=nu_e, size=1) / nu_e
-        s_e[i:(i + 2)] = mix_param
-        i = i + 2
+        s_e[ind] = mix_param
 
     scale_param = sigma_e / s_e
 
