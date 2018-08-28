@@ -22,7 +22,7 @@ from settings import CONFIGS as cf
 
 # Read in data
 print('Working directory: ', os.getcwd())
-cpg, pheno = load_data('data', all_cpgs=False)
+cpg, cpg_name, pheno = load_data('data', all_cpgs=False)
 cpg = pd.DataFrame(cpg)
 
 #
@@ -65,22 +65,22 @@ y_train = np.array(y_train)
 
 print('\n########################################')
 print('Initializing hyperparameters')
-tau_b = 4.0
-Tau_b = 3/8
+tau_b = 4.0   # degree of belief > 4
+Tau_b = 3/8   # prior value for scale param
 nu_b = 4.0
 
 sigma_b, s_b, b = initialize_familial_parameters(n_fam=n_families, tau_b=tau_b, Tau_b=Tau_b, nu_b=nu_b)
-#plot_histogram(b, 'Ranfom effects')
+plot_histogram(b, 'Ranfom effects')
 
 
 # The inpendent individual error term
-tau_e = 4.0
-Tau_e = 1/8
+tau_e = 4.0   # degree of belief > 2
+Tau_e = 1/8   # prior value for scale
 nu_e = 1.0
 
-sigma_e, s_e, scale_param = initialize_individual_parameters(family_indices, tau_e=tau_e, Tau_e=Tau_e, nu_e=nu_e)
-#plot_histogram(s_e, 'Mixture parameter of individual error term')
-#plot_histogram(scale_param, 'Scale parameter')
+sigma_e, s_e, scale_param = initialize_individual_parameters(family_indices, X_train.shape[0], tau_e=tau_e, Tau_e=Tau_e, nu_e=nu_e)
+plot_histogram(s_e, 'Mixture parameter of individual error term')
+plot_histogram(scale_param, 'Scale parameter')
 
 
 print('\n#####################################')
@@ -90,16 +90,45 @@ print('Average variance for b: ', np.mean(sigma_b))
 print('Average variance for e: ', np.mean(sigma_e))
 print('Nonzero elements in Z:', len(Z_train.nonzero()[0]))
 
-final_estimates, updated_s_e, updated_s_u, updated_sigma_e, updated_sigma_b = estimate_BLUP(y_train, X_train, Z_train, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices, n=10000)
+final_estimates, updated_s_e, updated_s_u, updated_sigma_e, updated_sigma_b = estimate_BLUP(y_train, X_train, Z_train, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices, n=20000)
+
+bayes_estimates = [final_estimates, updated_s_e, updated_s_u, updated_sigma_e, updated_sigma_b]
+for i in range(len(bayes_estimates)):
+    data = pd.DataFrame(bayes_estimates[i])
+
+    if i == 0:
+        file_name = 'data/coefficients.csv'
+    elif i == 1:
+        file_name = 'data/s_e.csv'
+    elif i == 2:
+        file_name = 'data/s_u.csv'
+    elif i == 3:
+        file_name = 'data/sigma.csv'
+    elif i == 4:
+        file_name = 'data/sigma_b'
+
+    data.to_csv(file_name)
+
 
 for i in range(0, X_train.shape[1]):
-    estimation = round(np.nanmean(final_estimates[1500:, i]), 5)
+    estimation = round(np.nanmean(final_estimates[::100, i]), 5)
     print('estimated params is {}'.format(estimation))
 
-    plt.plot(final_estimates[1500:, i])
-    ymin = np.percentile(final_estimates[1500:, i], 5)
-    ymax = np.percentile(final_estimates[1500:, i], 95)
-    plt.ylim(ymin, ymax)
+    # Subset data
+    ymin = np.percentile(final_estimates[1500:, i], 10)
+    ymax = np.percentile(final_estimates[1500:, i], 90)
+    mask = (final_estimates[:, i] > ymin ) & (final_estimates[:, i] < ymax)
+    subset = final_estimates[mask, :]
+
+    plt.plot(subset[::100, i])
+    #plt.ylim(ymin, ymax)
     plt.show()
+
+    # Take subset of data
+    subset = subset[::100, i]  # 0.00320705699501159
+
+    print('Estimated param for subset = ', round(np.nanmean(subset), 5))
+
+
 
 

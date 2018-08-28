@@ -32,11 +32,8 @@ def estimate_s_e(sigma_e, nu_e, y, X, b, Z, u, family_indices):
         # Calculate the estimate for the family i
         s_e_i = chisquare(df) / S_e
 
-        try:
-            s_e[ind[0]] = s_e_i
-            s_e[ind[1]] = s_e_i
-        except:
-            s_e[ind[0]] = s_e_i
+        # Update the s_e for ith family
+        s_e[ind] = s_e_i
 
     return s_e
 
@@ -61,6 +58,7 @@ def estimate_sigma_e(s_e, y, X, b, Z, u, tau_e, Tau_e, family_indices):
     y_copy = y.copy()
     X_copy = X.copy()
     Z_copy = Z.copy()
+
     for family_ind in family_indices:
 
         # Calculate the S_t for every group m separately

@@ -46,11 +46,6 @@ def estimate_BLUP(y, X, Z, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e
             a_worm_i = (1/coefficient_matrix[j, j]) * (right_hand[j] - final_sum)
             scale = np.sqrt((1/coefficient_matrix[j, j]))
 
-            if scale < 0:
-                print('\nScale is negative')
-                print('i= ', i)
-                break
-
             estimates[i, j] = np.random.normal(loc=a_worm_i, scale=scale)
 
         if i % 1000 == 0:

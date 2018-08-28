@@ -12,13 +12,16 @@ def load_data(path='', all_cpgs=False):
     """
         Loads CpG and phenotype data from a given path and returns two pandas dataframes.
     """
-    cpg = pd.read_csv(path + '/estimated_top_cpgs_age.csv')
+    cpg = pd.read_csv(path + '/estimated_top_cpgs_age.csv', index_col=0)
+    cpg_names = cpg.index
     pheno = pd.read_csv(path + '/pheno_data_MZ.csv')
 
     # If all CpGs aren't imported, pick randomly one CpG
     if not all_cpgs:
         rand_int = randint(0, cpg.shape[0])
         cpg = cpg.iloc[rand_int]
+        cpg_name = cpg_names[rand_int]
+        print('CpG: ', cpg_name)
 
     cpg_transpose = cpg.transpose()
 
@@ -32,7 +35,7 @@ def load_data(path='', all_cpgs=False):
     if not (cpg_transpose.index.values == pheno['Barcode'].values).all():
         warnings.warn('Data is not in the correct order')
 
-    return cpg_transpose, pheno
+    return cpg_transpose, cpg_name, pheno
 
 
 def subset_pheno(pheno_data, remove_nans=False, categorize=False, remove_correlated=False):
