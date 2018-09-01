@@ -6,6 +6,12 @@ from numpy.linalg import inv
 """
 
 def henderson_model_equations(y, X, Z, s_b, sigma_b, s_e, sigma_e):
+
+    # Check that s_e is the same length as Z.shape[1]
+    if len(s_e) != len(y):
+        print('Length s_e != len(y)')
+        return None
+
     diagonal_value = np.multiply(s_e, (1 / sigma_e))
     R_inv = np.diag(diagonal_value)
 
