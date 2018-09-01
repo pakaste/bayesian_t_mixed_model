@@ -17,19 +17,22 @@ def estimate_s_e(sigma_e, nu_e, y, X, b, Z, u, family_indices):
     s_e = np.zeros(len(y))
 
     for ind in family_indices:
-        df = nu_e + len(ind)
         y_copy = np.squeeze(y.copy())
         X_copy = X.copy()
         Z_copy = Z.copy()
 
         # Calculate the S_e for every other observation, except belonging to this group
-        y_subset = np.delete(y_copy, ind, axis=0)
-        X_subset = np.delete(X_copy, ind, axis=0)
-        Z_subset = np.delete(Z_copy, ind, axis=0)
+        #y_subset = np.delete(y_copy, ind, axis=0)
+        #X_subset = np.delete(X_copy, ind, axis=0)
+        #Z_subset = np.delete(Z_copy, ind, axis=0)
+        y_subset = y_copy[ind]
+        X_subset = X_copy[ind, :]
+        Z_subset = Z_copy[ind, :]
 
         S_e = calculate_S_e(sigma_e, nu_e, y_subset, X_subset, b, Z_subset, u)
 
         # Calculate the estimate for the family i
+        df = nu_e + len(ind)
         s_e_i = chisquare(df) / S_e
 
         # Update the s_e for ith family
@@ -54,10 +57,11 @@ def estimate_sigma_e(s_e, y, X, b, Z, u, tau_e, Tau_e, family_indices):
         Updates the estimate for sigma_e
     """
 
-    S_t = 0
     y_copy = y.copy()
     X_copy = X.copy()
     Z_copy = Z.copy()
+
+    S_t = 0
 
     for family_ind in family_indices:
 
@@ -67,11 +71,11 @@ def estimate_sigma_e(s_e, y, X, b, Z, u, tau_e, Tau_e, family_indices):
         Z_subset = Z_copy[family_ind]
         s_e_i = s_e[family_ind][0]
 
-        group_m_S_t = calculate_sum(s_e_i, y_subset, X_subset, b, Z_subset, u)
-        S_t = S_t + group_m_S_t
+        S_t_m = calculate_sum(s_e_i, y_subset, X_subset, b, Z_subset, u)
+        S_t = S_t + S_t_m
 
     nominator = (tau_e * Tau_e) + S_t
-    df = tau_e + X.shape[0]
+    df = tau_e + len(y)
 
     sigma_estimate = nominator / chisquare(df=df)
 
