@@ -25,19 +25,22 @@ def initialize_parameters(n, cov_dim, initial_value, s_b, sigma_b, s_e, sigma_e)
 
 
 def calculate_uAu(Z, u):
+
+    # Calculate covariance matrix for familial effects: A = Z^T Z
     Z_tranpose = np.transpose(Z)
     A = np.dot(Z_tranpose, Z)
     A_inv = np.linalg.inv(A)
 
     # Multiply by u
-    covariance = np.dot(np.dot(np.transpose(u), A_inv), u)
+    u_Ainv = np.dot(np.transpose(u), A_inv)
+    covariance = np.dot(u_Ainv, u)
 
     return covariance
 
 
 def calculate_covariance_u(Z, u, sigma_u, nu_u):
-    S_u = calculate_uAu(Z, u)
-    scaled_S_u = (S_u / (1 / sigma_u)) + nu_u
+    uAu = calculate_uAu(Z, u)
+    scaled_S_u = (uAu / sigma_u) + nu_u
 
     return scaled_S_u
 
@@ -49,10 +52,6 @@ def calculate_sse(y, X, b, Z, u):
 
     # SSE^T SSE
     sse = y - Xb - Zu
-    #mask = np.isfinite(sse)
-    indeces = np.array([i for i in range(len(sse))]).reshape(sse.shape)
-    #print('\nNot finite values: ', sse[~mask])
-    #print(indeces[~mask])
     sse_transpose = np.transpose(sse)
 
     # Take the matrix multiplication
@@ -74,7 +73,7 @@ def calculate_S_e(sigma_e, nu_e, y, X, b, Z, u):
         print('sigma_e: ', sigma_e)
         print('nu_e: ', nu_e)
 
-    return scaled_sse
+        return None
 
 
 def calculate_sum(s, y, X, b, Z, u):
