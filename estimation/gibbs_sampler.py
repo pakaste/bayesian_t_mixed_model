@@ -15,7 +15,11 @@ from estimation.utils import initialize_parameters
 
 # Initialize individual error terms
 
-def estimate_BLUP(y, X, Z, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices, initial_value=0.0001, n=1000):
+def run_gibbs_sampler(y, X, Z, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices, initial_value=0.0001, n=1000):
+
+    """
+        Updates the BLUP parameters as well as variance components for for familial and individual terms with MCMC sampling scheme. Tau and tau values have to given as hyperparameters.
+    """
 
     # Initialize random coefficients for updating parameters
     p_dim = X.shape[1]
@@ -27,6 +31,7 @@ def estimate_BLUP(y, X, Z, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e
     # Start updating the parameters
     for i in range(1, estimates.shape[0]):
 
+        # Update the BLUP parameters
         # Calculate updated Henderson model equation
         coefficient_matrix, right_hand = henderson_model_equations(y, X, Z, updated_s_b[i-1], updated_sigma_b[i-1], updated_s_e[i-1], updated_sigma_e[i-1])
 
