@@ -16,7 +16,7 @@ from visualization.plotting import plot_histogram
 from utils.hyperparameters import initialize_familial_parameters
 from utils.hyperparameters import initialize_individual_parameters
 
-from estimation.blup_estimates import estimate_BLUP
+from estimation.gibbs_sampler import run_gibbs_sampler
 from estimation.variance_parameters import estimate_s_e
 from estimation.variance_parameters import estimate_s_u
 from estimation.variance_parameters import estimate_sigma_e
@@ -25,12 +25,12 @@ from settings import CONFIGS as cf
 
 # Use real data
 real = False
-iters = 20000
+iters = 10000
 
 # fake data
 random.seed(10)
 n_rows = 100
-n_cols = 2
+n_cols = 6
 
 # Initialize hyperparameters
 tau_b = 4.0   # degree of belief > 4
@@ -107,7 +107,7 @@ print('Average variance for b: ', np.mean(sigma_b))
 print('Average variance for e: ', np.mean(sigma_e))
 print('Nonzero elements in Z:', len(Z_train.nonzero()[0]))
 
-final_estimates, updated_s_e, updated_s_u, updated_sigma_e, updated_sigma_b = estimate_BLUP(y_train, X_train, Z_train, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices, n=iters)
+final_estimates, updated_s_e, updated_s_u, updated_sigma_e, updated_sigma_b = run_gibbs_sampler(y_train, X_train, Z_train, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices, n=iters)
 
 bayes_estimates = [final_estimates, updated_s_e, updated_s_u, updated_sigma_e, updated_sigma_b]
 for i in range(len(bayes_estimates)):
