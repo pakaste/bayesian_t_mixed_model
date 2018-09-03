@@ -29,8 +29,8 @@ iters = 10000
 
 # fake data
 random.seed(10)
-n_rows = 100
-n_cols = 6
+n_rows = 500
+n_cols = 3
 
 # Initialize hyperparameters
 tau_b = 4.0   # degree of belief > 4
@@ -135,11 +135,11 @@ for i in range(0, X_train.shape[1]):
     mask = (final_estimates[:, i] > ymin ) & (final_estimates[:, i] < ymax)
     subset = final_estimates[mask, :]
 
-    plt.plot(subset[::30, i])
+    plt.plot(subset[::10, i])
     plt.show()
 
     # Take subset of data
-    subset = subset[::30, i]  # 0.00320705699501159
+    subset = subset[::10, i]  # 0.00320705699501159
 
     print('\nEstimated param for subset = ', round(np.nanmedian(subset), 5))
     if not real:
