@@ -41,8 +41,6 @@ def simulate_fake_data(n, p, tau_b, Tau_b, nu_b, tau_e, Tau_e, nu_e, seed=10):
     # The inpendent individual error term
     sigma_e, s_e, scale_param = initialize_individual_parameters(family_indices=family_indices, n=n, tau_e=tau_e, Tau_e=Tau_e, nu_e=nu_e)
 
-    print('scale_param:' , scale_param)
-
     print('Initializing dependent variable')
     y = np.dot(X, beta) + np.dot(Z, b) + np.random.normal(loc=0, scale=scale_param, size=n)
 
