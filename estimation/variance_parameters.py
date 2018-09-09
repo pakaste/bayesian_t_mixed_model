@@ -22,9 +22,6 @@ def estimate_s_e(sigma_e, nu_e, y, X, b, Z, u, family_indices):
         Z_copy = Z.copy()
 
         # Calculate the S_e for every other observation, except belonging to this group
-        #y_subset = np.delete(y_copy, ind, axis=0)
-        #X_subset = np.delete(X_copy, ind, axis=0)
-        #Z_subset = np.delete(Z_copy, ind, axis=0)
         y_subset = y_copy[ind]
         X_subset = X_copy[ind, :]
         Z_subset = Z_copy[ind, :]
