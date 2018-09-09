@@ -4,12 +4,14 @@
 """
 
 import numpy as np
+from numpy.random import normal
 
 from estimation.hendersson_equations import henderson_model_equations
 from estimation.variance_parameters import estimate_s_e
 from estimation.variance_parameters import estimate_s_u
 from estimation.variance_parameters import estimate_sigma_e
 from estimation.variance_parameters import estimate_sigma_u
+from estimation.degrees_of_freedom import discrete_nu_e
 from estimation.utils import initialize_parameters
 
 
@@ -26,7 +28,7 @@ def run_gibbs_sampler(y, X, Z, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, t
     q_dim = Z.shape[1]
     cov_dim = p_dim + q_dim
 
-    estimates, updated_s_b, updated_sigma_b, updated_s_e, updated_sigma_e =initialize_parameters(n, cov_dim, initial_value, s_b, sigma_b, s_e, sigma_e)
+    estimates, updated_s_b, updated_sigma_b, updated_s_e, updated_sigma_e, updated_nu_e = initialize_parameters(n, cov_dim, initial_value, s_b, sigma_b, s_e, sigma_e, nu_e)
 
     # Start updating the parameters
     for i in range(1, estimates.shape[0]):
@@ -61,15 +63,27 @@ def run_gibbs_sampler(y, X, Z, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, t
 
         # Update s_u
         updated_s_b[i] = estimate_s_u(Z, estimates[i, p_dim:], updated_sigma_b[i-1], nu_b)
-        #print('\nupdated_s_b[i]: ', updated_s_b[i])
 
         # Update sigma_e
         updated_sigma_e[i] = estimate_sigma_e(updated_s_e[i-1, :], y, X, estimates[i, :p_dim], Z, estimates[i, p_dim:], tau_e, Tau_e, family_indices)
-        #print('updated_sigma_e[i]: ', updated_sigma_e[i])
 
         # Update Sigma_b
         updated_sigma_b[i] = estimate_sigma_u(updated_s_b[i-1], y, X, estimates[i, :p_dim], Z, estimates[i, p_dim:], tau_b, Tau_b)
-        #print('updated_sigma_b[i]: ', updated_sigma_b[i])
+
+        # Update nu_e
+        #updated_nu_e[i] = discrete_nu_e(nu_e, s_e, len(family_indices))
+
+    return estimates, updated_s_e, updated_s_b, updated_sigma_e, updated_sigma_b, updated_nu_e
 
 
-    return estimates, updated_s_e, updated_s_b, updated_sigma_e, updated_sigma_b
+def run_one_chain(y, X, Z, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices, n=1000):
+
+    # Randomly start initial value
+    initial_value = abs(0.1*normal(mean=0.0, scale=1.0))
+
+    # Run gibbs sampler
+    final_estimates, updated_s_e, updated_s_u, updated_sigma_e, updated_sigma_b, updated_nu_e = run_gibbs_sampler(y_train, X_train, Z_train, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices, initial_value=initial_value, n=iters)
+
+    bayes_estimates = [final_estimates, updated_s_e, updated_s_u, updated_sigma_e, updated_sigma_b, updated_nu_e]
+
+    return bayes_estimates
