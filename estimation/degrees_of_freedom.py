@@ -13,13 +13,10 @@ def calculate_P_e(s_e, m):
             (int)
     """
 
-    # Check that length of s_e matches that of m
-    if len(s_e) != m:
-        warnings.warn('len(s_e) != m')
-        return None
+    multiplier = s_e[0]
+    for i in range(1, len(s_e)):
+        multiplier *= (s_e[i]**2)
 
-    s_e2 = s_e**2
-    multiplier = np.multiply(s_e2)
     pe = multiplier**(1/m)
 
     return pe
@@ -34,7 +31,7 @@ def calculate_fj(d_e):
             float
     """
 
-    return 1/d_e
+    return d_e
 
 
 def calculate_C_e(s_e, m, d_e):
@@ -55,23 +52,28 @@ def calculate_C_e(s_e, m, d_e):
     s_e_sum2 = np.sum(s_e**2)
 
     for j in range(len(d_e)):
+        print('\nj: ', j)
 
         fj = calculate_fj(d_e[j])
 
         # Calculate parts
         multiplier = (m*fj)/2
+        print('multiplier: ', multiplier)
         gamma_term = (gamma(fj/2))**(-m)
+        print('gamma_term: ', gamma_term)
         exp_term = np.exp(-(fj/2)*s_e_sum2)
+        print('exp_term: ', exp_term)
 
         # The j:th sum
         sum_j = (((fj * P_e)/2)**multiplier) * gamma_term * exp_term
+        print('sum_j: ', sum_j)
 
         sum_all = sum_all + sum_j
 
     return sum_all
 
 
-def discrete_nu_e(nu_e, s_e, d_e, m):
+def discrete_nu_e(nu_e, s_e, m, d_e=[2, 4, 10, 100, 1000]):
     """
         Updates the degrees of freedom parameter nu_e if prior distribution for nu_e is discrete, instead of continuous.
     """
@@ -83,9 +85,9 @@ def discrete_nu_e(nu_e, s_e, d_e, m):
         warnings.warn('P_e is None!')
         return None
 
-    C_e = calculate_C_e(s_e, m, d_e)
+    inv_C_e = calculate_C_e(s_e, m, d_e)
 
-    if C_e == 0:
+    if inv_C_e == 0:
         warnings.warn('C_e is exactly zero!')
 
     # Calculate the sum over m groups of s_e^2
@@ -94,7 +96,7 @@ def discrete_nu_e(nu_e, s_e, d_e, m):
 
     gamma_term = (gamma(nu_e/2))**(-m)
 
-    multiplier = (m*n_u)/2
-    updated_nu = C_e * (nu_e*P_e/2)**multiplier * gamma_term * exp_term
+    multiplier = (m*nu_e)/2
+    updated_nu = C_e * ((nu_e*P_e/2)**multiplier) * gamma_term * exp_term
 
-    return update_nu
+    return updated_nu
