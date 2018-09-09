@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def initialize_parameters(n, cov_dim, initial_value, s_b, sigma_b, s_e, sigma_e):
+def initialize_parameters(n, cov_dim, initial_value, s_b, sigma_b, s_e, sigma_e, nu_e):
     # Initialize random coefficients for updating parameters
     coefficients = np.array([initial_value]*cov_dim)
 
@@ -10,18 +10,22 @@ def initialize_parameters(n, cov_dim, initial_value, s_b, sigma_b, s_e, sigma_e)
     updated_sigma_b = np.zeros(n)
     updated_s_e = np.zeros((n, len(s_e)))
     updated_sigma_e = np.zeros(n)
+    updated_nu_e = np.zeros(n)
 
     # Set the first values calculated from hyperparameters
     updated_s_b[0] = s_b
     updated_sigma_b[0] = sigma_b
+
     updated_s_e[0, :] = s_e
     updated_sigma_e[0] = sigma_e
+
+    updated_nu_e[0] = nu_e
 
     # Create empty array where to save the results
     estimates =  np.zeros(shape=(n, cov_dim))
     estimates[0, :] = coefficients
 
-    return estimates, updated_s_b, updated_sigma_b, updated_s_e, updated_sigma_e
+    return estimates, updated_s_b, updated_sigma_b, updated_s_e, updated_sigma_e, updated_nu_e
 
 
 def calculate_uAu(Z, u):
