@@ -3,6 +3,8 @@
     coefficient vector u as stated in Strandén & Gianola.
 """
 
+import sys
+from datetime import datetime
 import numpy as np
 from numpy.random import normal
 
@@ -17,7 +19,7 @@ from estimation.utils import initialize_parameters
 
 # Initialize individual error terms
 
-def run_gibbs_sampler(y, X, Z, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices, initial_value=0.0001, n=1000):
+def run_gibbs_sampler(y, X, Z, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices, initial_value, n):
 
     """
         Updates the BLUP parameters as well as variance components for for familial and individual terms with MCMC sampling scheme. Tau and tau values have to given as hyperparameters.
@@ -76,14 +78,30 @@ def run_gibbs_sampler(y, X, Z, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, t
     return estimates, updated_s_e, updated_s_b, updated_sigma_e, updated_sigma_b, updated_nu_e
 
 
-def run_one_chain(y, X, Z, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices, n=1000):
+def run_one_chain(params, iters):
+
+    y = params[0]
+    X = params[1]
+    Z = params[2]
+    s_b = params[3]
+    sigma_b = params[4]
+    tau_b = params[5]
+    Tau_b = params[6]
+    nu_b = params[7]
+    s_e = params[8]
+    sigma_e = params[9]
+    tau_e = params[10]
+    Tau_e = params[11]
+    nu_e = params[12]
+    family_indices = params[13]
 
     # Randomly start initial value
-    initial_value = abs(0.1*normal(mean=0.0, scale=1.0))
+    initial_value = abs(0.1*normal(loc=0.0, scale=1.0))
 
     # Run gibbs sampler
-    final_estimates, updated_s_e, updated_s_u, updated_sigma_e, updated_sigma_b, updated_nu_e = run_gibbs_sampler(y_train, X_train, Z_train, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices, initial_value=initial_value, n=iters)
+    final_estimates, updated_s_e, updated_s_u, updated_sigma_e, updated_sigma_b, updated_nu_e = run_gibbs_sampler(y, X, Z, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices, initial_value=initial_value, n=iters)
 
     bayes_estimates = [final_estimates, updated_s_e, updated_s_u, updated_sigma_e, updated_sigma_b, updated_nu_e]
 
     return bayes_estimates
+
