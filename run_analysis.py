@@ -1,11 +1,13 @@
 import os
 import collections
 import random
+import multiprocessing
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pandas.plotting import scatter_matrix
+from multiprocessing import Process, Queue
 
 from data_wrangling.load_data import load_data, subset_pheno
 from data_wrangling.training_testing_set import divide_into_training_and_testing
@@ -17,6 +19,8 @@ from utils.hyperparameters import initialize_familial_parameters
 from utils.hyperparameters import initialize_individual_parameters
 
 from estimation.gibbs_sampler import run_gibbs_sampler
+from estimation.gibbs_sampler import run_one_chain
+
 from estimation.variance_parameters import estimate_s_e
 from estimation.variance_parameters import estimate_s_u
 from estimation.variance_parameters import estimate_sigma_e
@@ -25,23 +29,32 @@ from settings import CONFIGS as cf
 
 # Use real data
 real = False
+
+# Amount of CPUs to be used
+n_cpu = 4
+
+# Plot generated data
+plot = False
+
+# Gibbs sampler parameters
 iters = 10000
+burn_in = 2000
 
 # fake data
 random.seed(10)
-n_rows = 500
+n_rows = 400
 n_cols = 3
 
 # Initialize hyperparameters
 tau_b = 4.0   # degree of belief > 4
 Tau_b = 3/8   # prior value for scale param
-nu_b = 4.0
+nu_b = 1/4.0
 
 
 # The inpendent individual error term
 tau_e = 4.0   # degree of belief > 2
 Tau_e = 1/8   # prior value for scale
-nu_e = 1.0
+nu_e = 1/4.0  # [4, 10, 100, 1000]
 
 if real:
     # Read in data
@@ -92,12 +105,11 @@ if real:
 else:
     y_train, X_train, beta, Z_train, sigma_b, s_b, b, sigma_e, s_e, scale_param, family_indices = simulate_fake_data(n_rows, n_cols, tau_b, Tau_b, nu_b, tau_e, Tau_e, nu_e, seed=10)
 
-plot_histogram(y_train, 'Dependent_variable')
-plot_histogram(b, 'Ranfom effects')
-plot_histogram(s_e, 'Mixture parameter of individual error term')
-plot_histogram(scale_param, 'Scale parameter')
-
-print('\nFAMILY_INDICES: ', family_indices)
+if plot:
+    plot_histogram(y_train, 'Dependent_variable')
+    plot_histogram(b, 'Ranfom effects')
+    plot_histogram(s_e, 'Mixture parameter of individual error term')
+    plot_histogram(scale_param, 'Scale parameter')
 
 
 print('\n#####################################')
@@ -107,43 +119,54 @@ print('Average variance for b: ', np.mean(sigma_b))
 print('Average variance for e: ', np.mean(sigma_e))
 print('Nonzero elements in Z:', len(Z_train.nonzero()[0]))
 
-final_estimates, updated_s_e, updated_s_u, updated_sigma_e, updated_sigma_b = run_gibbs_sampler(y_train, X_train, Z_train, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices, n=iters)
+# Put variables into a list
+params = [y_train, X_train, Z_train, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices]
 
-bayes_estimates = [final_estimates, updated_s_e, updated_s_u, updated_sigma_e, updated_sigma_b]
-for i in range(len(bayes_estimates)):
-    data = pd.DataFrame(bayes_estimates[i])
+print('\n#####################################')
+print('Start multiple chains')
 
-    if i == 0:
-        file_name = 'data/coefficients.csv'
-    elif i == 1:
-        file_name = 'data/s_e.csv'
-    elif i == 2:
-        file_name = 'data/s_u.csv'
-    elif i == 3:
-        file_name = 'data/sigma.csv'
-    elif i == 4:
-        file_name = 'data/sigma_b'
+results = []
+for i in range(4):
+    results.append(run_one_chain(params, iters))
 
-    data.to_csv(file_name)
+for result in results:
+    bayes_estimates = result
+    print('chain_id = ', chain_id)
+
+    print('\nStart showing the results for {}th chain'.format(chain_id))
+    final_estimates = bayes_estimates[0]
+
+    for i in range(0, X_train.shape[1]):
+
+        # Subset data
+        estimate = final_estimates[burn_in:, i]
+        plt.plot(subset[::20])
+        plt.show()
+
+        # Take subset of data
+        subset = estimate[::20]  # 0.00320705699501159
+
+        print('\nEstimated param for subset = ', round(np.nanmedian(subset), 5))
+        if not real:
+            print('Original param = ', beta[i])
+
+    # Plot the other estimates
+    for i in range(2, 6):
+        if i == 2:
+            title = 'updated_s_u'
+        elif i == 3:
+            title = 'updated_sigma_e'
+        elif i == 4:
+            title = 'updated_sigma_b'
+        elif i == 5:
+            title = 'updated_nu_e'
+
+        estimates = bayes_estimates[i]
+        plt.plot(estimates)
+        plt.title(title)
+        plt.show()
 
 
-for i in range(0, X_train.shape[1]):
-
-    # Subset data
-    ymin = np.percentile(final_estimates[1500:, i], 10)
-    ymax = np.percentile(final_estimates[1500:, i], 90)
-    mask = (final_estimates[:, i] > ymin ) & (final_estimates[:, i] < ymax)
-    subset = final_estimates[mask, :]
-
-    plt.plot(subset[::10, i])
-    plt.show()
-
-    # Take subset of data
-    subset = subset[::10, i]  # 0.00320705699501159
-
-    print('\nEstimated param for subset = ', round(np.nanmedian(subset), 5))
-    if not real:
-        print('Original param = ', beta[i])
 
 
 
