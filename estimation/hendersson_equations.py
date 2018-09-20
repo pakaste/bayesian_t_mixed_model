@@ -1,9 +1,10 @@
-import numpy as np
-from numpy.linalg import inv
-
 """
     Henderson's mixed model equations for estimating the model parameters.
 """
+
+import numpy as np
+from numpy.linalg import inv
+
 
 def henderson_model_equations(y, X, Z, s_b, sigma_b, s_e, sigma_e):
 
