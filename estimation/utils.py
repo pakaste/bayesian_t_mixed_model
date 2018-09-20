@@ -19,7 +19,7 @@ def initialize_parameters(n, cov_dim, initial_value, s_b, sigma_b, s_e, sigma_e,
     updated_s_e[0, :] = s_e
     updated_sigma_e[0] = sigma_e
 
-    updated_nu_e[0] = nu_e
+    updated_nu_e[:] = 4
 
     # Create empty array where to save the results
     estimates =  np.zeros(shape=(n, cov_dim))
