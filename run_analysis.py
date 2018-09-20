@@ -1,13 +1,18 @@
 import os
+
+# Set the OPENBLAS to use only one core
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+
 import collections
 import random
-import multiprocessing
+import datetime
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pandas.plotting import scatter_matrix
-from multiprocessing import Process, Queue
+import multiprocessing as mp
+from numpy.random import normal
 
 from data_wrangling.load_data import load_data, subset_pheno
 from data_wrangling.training_testing_set import divide_into_training_and_testing
@@ -37,24 +42,33 @@ n_cpu = 4
 plot = False
 
 # Gibbs sampler parameters
-iters = 10000
+iters = 50000
 burn_in = 2000
+
+# Chains to be generated
+n_chains = 4
 
 # fake data
 random.seed(10)
-n_rows = 400
-n_cols = 3
+n_rows = 500
+n_cols = 10
 
 # Initialize hyperparameters
 tau_b = 4.0   # degree of belief > 4
 Tau_b = 3/8   # prior value for scale param
 nu_b = 1/4.0
 
-
 # The inpendent individual error term
 tau_e = 4.0   # degree of belief > 2
 Tau_e = 1/8   # prior value for scale
 nu_e = 1/4.0  # [4, 10, 100, 1000]
+
+# Get current datetime
+dt_now = datetime.datetime.now()
+year = str(dt_now.year)
+month = str(dt_now.month)
+day = str(dt_now.day)
+dt_now_string = year + '_' + month + '_' + day
 
 if real:
     # Read in data
@@ -125,49 +139,27 @@ params = [y_train, X_train, Z_train, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigm
 print('\n#####################################')
 print('Start multiple chains')
 
-results = []
-for i in range(4):
-    results.append(run_one_chain(params, iters))
+pool = mp.Pool(processes=4)
+results = [pool.apply_async(run_one_chain, args=(params, iters, init_val)) for init_val in abs(normal(loc=0.0, scale=3.0, size=n_chains))]
+results = [p.get() for p in results]
 
-for result in results:
+# Create new folder for results
+newpath = cf.DATA_DIR + '/' + dt_now_string
+
+if not os.path.exists(newpath):
+    os.makedirs(newpath)
+
+for chain, result in enumerate(results):
     bayes_estimates = result
-    print('chain_id = ', chain_id)
-
-    print('\nStart showing the results for {}th chain'.format(chain_id))
     final_estimates = bayes_estimates[0]
+    s_e_estimates = bayes_estimates[1]
+    s_u_estimates = bayes_estimates[2]
+    sigma_e_estimates = bayes_estimates[3]
+    sigma_b_estimates = bayes_estimates[4]
+    nu_e_estimates = bayes_estimates[5]
 
-    for i in range(0, X_train.shape[1]):
-
-        # Subset data
-        estimate = final_estimates[burn_in:, i]
-        plt.plot(subset[::20])
-        plt.show()
-
-        # Take subset of data
-        subset = estimate[::20]  # 0.00320705699501159
-
-        print('\nEstimated param for subset = ', round(np.nanmedian(subset), 5))
-        if not real:
-            print('Original param = ', beta[i])
-
-    # Plot the other estimates
-    for i in range(2, 6):
-        if i == 2:
-            title = 'updated_s_u'
-        elif i == 3:
-            title = 'updated_sigma_e'
-        elif i == 4:
-            title = 'updated_sigma_b'
-        elif i == 5:
-            title = 'updated_nu_e'
-
-        estimates = bayes_estimates[i]
-        plt.plot(estimates)
-        plt.title(title)
-        plt.show()
-
-
-
-
-
-
+    # Write results into a csv file
+    for i in range(len(bayes_estimates)):
+        pd_data = pd.DataFrame(bayes_estimates[i])
+        file_name = newpath + '/' + cf.estimate_names[i] + '_chain_' + str(chain) + '.csv'
+        pd_data.to_csv(file_name, header=False, index=False)
