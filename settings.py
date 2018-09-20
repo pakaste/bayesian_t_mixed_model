@@ -1,4 +1,14 @@
+from os.path import join
+from os.path import abspath
+from os.path import dirname
+from os import pardir
+
+
 class Config(object):
+
+    CURRENT_DIR = abspath(dirname(__file__))
+    ROOT_DIR = abspath(join(CURRENT_DIR, pardir))
+    DATA_DIR = abspath(join(ROOT_DIR, "bayesian_t_mixed_model/data")) # Up to data/
 
     covariates = ['Age.at.blood.draw',
                 #'GENDER',
@@ -33,6 +43,15 @@ class Config(object):
         'tau_e' : 1.0,
         'Tau_e' : 0.01,
         'nu_e' : 2.0
+    }
+
+    estimate_names = {
+        0 : 'coefficients',
+        1 : 's_e_estimates',
+        2 : 's_u_estimates',
+        3 : 'sigma_e_estimates',
+        4 : 'sigma_b_estimates',
+        5 : 'nu_e_estimates'
     }
 
 
