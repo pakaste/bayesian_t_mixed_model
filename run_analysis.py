@@ -1,7 +1,7 @@
 import os
 
-# Set the OPENBLAS to use only one core
-os.environ['OPENBLAS_NUM_THREADS'] = '1'
+# Set the OPENBLAS to use only certain amount of cores
+os.environ['OPENBLAS_NUM_THREADS'] = '2'
 
 import collections
 import random
