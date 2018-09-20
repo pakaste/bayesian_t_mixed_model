@@ -4,9 +4,9 @@
 """
 
 import sys
-from datetime import datetime
+import random
+import time
 import numpy as np
-from numpy.random import normal
 
 from estimation.hendersson_equations import henderson_model_equations
 from estimation.variance_parameters import estimate_s_e
@@ -78,7 +78,9 @@ def run_gibbs_sampler(y, X, Z, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, t
     return estimates, updated_s_e, updated_s_b, updated_sigma_e, updated_sigma_b, updated_nu_e
 
 
-def run_one_chain(params, iters):
+def run_one_chain(params, iters, initial_value):
+
+    random.seed(initial_value)
 
     y = params[0]
     X = params[1]
@@ -96,7 +98,7 @@ def run_one_chain(params, iters):
     family_indices = params[13]
 
     # Randomly start initial value
-    initial_value = abs(0.1*normal(loc=0.0, scale=1.0))
+    print('initial values: ', initial_value)
 
     # Run gibbs sampler
     final_estimates, updated_s_e, updated_s_u, updated_sigma_e, updated_sigma_b, updated_nu_e = run_gibbs_sampler(y, X, Z, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices, initial_value=initial_value, n=iters)
