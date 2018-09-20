@@ -1,7 +1,7 @@
 import os
 
 # Set the OPENBLAS to use only certain amount of cores
-os.environ['OPENBLAS_NUM_THREADS'] = '2'
+os.environ['OPENBLAS_NUM_THREADS'] = '3'
 
 import collections
 import random
@@ -11,8 +11,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pandas.plotting import scatter_matrix
-import multiprocessing as mp
-from numpy.random import normal
+
+from settings import CONFIGS as cf
 
 from data_wrangling.load_data import load_data, subset_pheno
 from data_wrangling.training_testing_set import divide_into_training_and_testing
@@ -22,27 +22,25 @@ from visualization.plotting import plot_histogram
 
 from utils.hyperparameters import initialize_familial_parameters
 from utils.hyperparameters import initialize_individual_parameters
+from utils.parallel_processing import multiprocess
 
-from estimation.gibbs_sampler import run_gibbs_sampler
 from estimation.gibbs_sampler import run_one_chain
 
-from estimation.variance_parameters import estimate_s_e
-from estimation.variance_parameters import estimate_s_u
-from estimation.variance_parameters import estimate_sigma_e
-from estimation.variance_parameters import estimate_sigma_u
-from settings import CONFIGS as cf
 
 # Use real data
 real = False
 
 # Amount of CPUs to be used
-n_cpu = 4
+n_processes = 4
+
+# Whether to run multiple MCMC chains
+multiple_chains = False
 
 # Plot generated data
 plot = False
 
 # Gibbs sampler parameters
-iters = 50000
+iters = 20000
 burn_in = 2000
 
 # Chains to be generated
@@ -56,12 +54,12 @@ n_cols = 10
 # Initialize hyperparameters
 tau_b = 4.0   # degree of belief > 4
 Tau_b = 3/8   # prior value for scale param
-nu_b = 1/4.0
+nu_b = 4
 
 # The inpendent individual error term
 tau_e = 4.0   # degree of belief > 2
 Tau_e = 1/8   # prior value for scale
-nu_e = 1/4.0  # [4, 10, 100, 1000]
+nu_e = 4 # [4, 10, 100, 1000]
 
 # Get current datetime
 dt_now = datetime.datetime.now()
@@ -126,9 +124,6 @@ if plot:
     plot_histogram(scale_param, 'Scale parameter')
 
 
-print('\n#####################################')
-print('START CALCULATING THE BLUP')
-
 print('Average variance for b: ', np.mean(sigma_b))
 print('Average variance for e: ', np.mean(sigma_e))
 print('Nonzero elements in Z:', len(Z_train.nonzero()[0]))
@@ -136,30 +131,58 @@ print('Nonzero elements in Z:', len(Z_train.nonzero()[0]))
 # Put variables into a list
 params = [y_train, X_train, Z_train, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices]
 
-print('\n#####################################')
-print('Start multiple chains')
-
-pool = mp.Pool(processes=4)
-results = [pool.apply_async(run_one_chain, args=(params, iters, init_val)) for init_val in abs(normal(loc=0.0, scale=3.0, size=n_chains))]
-results = [p.get() for p in results]
-
 # Create new folder for results
 newpath = cf.DATA_DIR + '/' + dt_now_string
 
 if not os.path.exists(newpath):
     os.makedirs(newpath)
 
-for chain, result in enumerate(results):
-    bayes_estimates = result
-    final_estimates = bayes_estimates[0]
-    s_e_estimates = bayes_estimates[1]
-    s_u_estimates = bayes_estimates[2]
-    sigma_e_estimates = bayes_estimates[3]
-    sigma_b_estimates = bayes_estimates[4]
-    nu_e_estimates = bayes_estimates[5]
+if multiple_chains:
+    print('\n#####################################')
+    print('Start multiple chains')
+
+    results = []
+    results = multiprocess(n_processes, params, iters, n_chains)
+
+    for chain, result in enumerate(results):
+        bayes_estimates = result
+        final_estimates = bayes_estimates[0]
+        s_e_estimates = bayes_estimates[1]
+        s_u_estimates = bayes_estimates[2]
+        sigma_e_estimates = bayes_estimates[3]
+        sigma_b_estimates = bayes_estimates[4]
+        nu_e_estimates = bayes_estimates[5]
+
+        # Write results into a csv file
+        for i in range(len(bayes_estimates)):
+            pd_data = pd.DataFrame(bayes_estimates[i])
+            file_name = newpath + '/' + cf.estimate_names[i] + '_chain_' + str(chain) + '.csv'
+            pd_data.to_csv(file_name, header=False, index=False)
+else:
+    print('\n#####################################')
+    print('Run one chain')
+
+    initial_value = 0.00001
+    bayes_estimates = run_one_chain(params, iters, initial_value)
 
     # Write results into a csv file
     for i in range(len(bayes_estimates)):
         pd_data = pd.DataFrame(bayes_estimates[i])
-        file_name = newpath + '/' + cf.estimate_names[i] + '_chain_' + str(chain) + '.csv'
+        file_name = newpath + '/' + cf.estimate_names[i] + '_initval_' + str(initial_value) + '.csv'
         pd_data.to_csv(file_name, header=False, index=False)
+
+    final_estimates = bayes_estimates[0]
+
+    for i in range(0, X_train.shape[1]):
+
+        # Subset data
+        estimate = final_estimates[burn_in:, i]
+        plt.plot(estimate[::20])
+        plt.show()
+
+        # Take subset of data
+        subset = estimate[::20]  # 0.00320705699501159
+
+        print('\nEstimated param for subset = ', round(np.nanmedian(subset), 5))
+        if not real:
+            print('Original param = ', beta[i])
