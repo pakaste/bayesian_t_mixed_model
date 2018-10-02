@@ -33,16 +33,16 @@ class Config(object):
     family_id = 'family_nb'
 
     # Random effect parameters for simulation
-    simulation_params = {
+    SIMULATION_PARAMS = {
         # Random effects parameters
-        'tau_b' : 2.0,
-        'Tau_b' : 0.05,
+        'tau_b' : 4.0,
+        'Tau_b' : 3/8,
         'nu_b' : 3.0, # Degrees of freedom
 
         # Individual hyperparameters
-        'tau_e' : 1.0,
-        'Tau_e' : 0.01,
-        'nu_e' : 2.0
+        'tau_e' : 4.0,
+        'Tau_e' : 1/8,
+        'nu_e' : 4.0
     }
 
     estimate_names = {
@@ -54,6 +54,14 @@ class Config(object):
         5 : 'nu_e_estimates'
     }
 
+    # Number of explanatory variables
+    NVARS = 5
+
+
+    # GIBBS SAMPLER
+    ITERS = 50000
+    BURN_IN = 3000
+    NCHAINS = 4 # Chains to be generated
 
 
 
