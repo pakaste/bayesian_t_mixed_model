@@ -1,6 +1,7 @@
 from numpy.random import randint
 import warnings
 import numpy as np
+import pandas as pd
 
 
 def divide_into_training_and_testing(X, y, family_id):
@@ -30,30 +31,28 @@ def divide_into_training_and_testing(X, y, family_id):
 
     return X_train, y_train, X_test, y_test
 
+def create_Z_matrix(data):
+    Z_matrix = pd.get_dummies(data['family_nb'])
 
-def create_familial_matrix(X, family_ids):
-    n = X.shape[0]
-    Z = np.zeros((n, len(family_ids)))
+    # Check that columns match those in the data
+    z_cols = set(Z_matrix.columns)
+    data_categories = set(data['family_nb'])
 
+    if z_cols != data_categories:
+        print('Z matrix columns does not match data categories!')
+        return None
+
+    # Check how many columns had only one individual
+    col_sums = Z_matrix.sum(axis=0)
+    mask = (col_sums < 2)
+
+    # Create family indices list
     family_indices = []
-    for i in range(len(family_ids)):
-        idxs = X.index[X['family_nb'] == family_ids[i]].tolist()
+    for family_ind in Z_matrix.columns:
+        idxs = data.index[data['family_nb'] == family_ind].tolist()
+        if len(idxs) == 2:
+            family_indices.append([idxs[0], idxs[1]])
+        else:
+            family_indices.append([idxs[0]])
 
-        try:
-            id1, id2 = idxs[0], idxs[1]
-            Z[id1, i] = 1
-            Z[id2, i] = 1
-            family_indices.append([id1, id2])
-
-        except IndexError as e:
-            print('IndexError: Individuals matching family id: {}'.format(len(idxs)))
-            id1 = idxs[0]
-            Z[id1, i] = 1
-            family_indices.append([id1])
-
-    return Z, family_indices
-
-
-
-
-
+    return np.array(Z_matrix), family_indices
