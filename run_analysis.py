@@ -1,7 +1,7 @@
 import os
 
 # Set the OPENBLAS to use only certain amount of cores
-os.environ['OPENBLAS_NUM_THREADS'] = '3'
+os.environ['OPENBLAS_NUM_THREADS'] = '2'
 
 import collections
 import random
@@ -16,7 +16,7 @@ from settings import CONFIGS as cf
 
 from data_wrangling.load_data import load_data, subset_pheno
 from data_wrangling.training_testing_set import divide_into_training_and_testing
-from data_wrangling.training_testing_set import create_familial_matrix
+from data_wrangling.training_testing_set import create_Z_matrix
 from data_wrangling.simulate_data import simulate_fake_data
 from visualization.plotting import plot_histogram
 
@@ -28,38 +28,16 @@ from estimation.gibbs_sampler import run_one_chain
 
 
 # Use real data
-real = False
+real = True
 
 # Amount of CPUs to be used
 n_processes = 4
 
 # Whether to run multiple MCMC chains
-multiple_chains = False
+multiple_chains = True
 
 # Plot generated data
 plot = False
-
-# Gibbs sampler parameters
-iters = 20000
-burn_in = 2000
-
-# Chains to be generated
-n_chains = 4
-
-# fake data
-random.seed(10)
-n_rows = 500
-n_cols = 10
-
-# Initialize hyperparameters
-tau_b = 4.0   # degree of belief > 4
-Tau_b = 3/8   # prior value for scale param
-nu_b = 4
-
-# The inpendent individual error term
-tau_e = 4.0   # degree of belief > 2
-Tau_e = 1/8   # prior value for scale
-nu_e = 4 # [4, 10, 100, 1000]
 
 # Get current datetime
 dt_now = datetime.datetime.now()
@@ -92,18 +70,17 @@ if real:
     print('X_test.shape, y_test.shape: ', X_test.shape, y_test.shape)
 
     # Calculate Z matrix
-    family_ids = list(set(X_train['family_nb']))
-    Z_train, family_indices = create_familial_matrix(X_train, family_ids)
-    print('Shape of Z_train: ', Z_train.shape)
+    Z_train, family_indices = create_Z_matrix(X_train)
+    print(Z_train.shape)
 
     # Number of families
-    n_families = len(family_ids)
+    n_families = Z_train.shape[1]
     print('Amount of families', n_families)
 
     # Drop family column and turn X into numpy array
     X_train = X_train.drop(columns='family_nb')
     X_train.insert(0, 'Intercept', [1]*X_train.shape[0])
-    X_train = X_train.iloc[:, :2]
+    X_train = X_train.iloc[:, :cf.NVARS]
     X_train = np.array(X_train)
     print('X_train.shape: ', X_train.shape)
     y_train = np.array(y_train)
@@ -111,11 +88,18 @@ if real:
 
     print('\n########################################')
     print('Initializing hyperparameters')
-    sigma_b, s_b, b = initialize_familial_parameters(n_fam=n_families, tau_b=tau_b, Tau_b=Tau_b, nu_b=nu_b)
-    sigma_e, s_e, scale_param = initialize_individual_parameters(family_indices, X_train.shape[0], tau_e=tau_e, Tau_e=Tau_e, nu_e=nu_e)
+    sim_params = cf.SIMULATION_PARAMS
+    sigma_b, s_b, b = initialize_familial_parameters(n_fam=n_families, tau_b=sim_params['tau_b'], Tau_b=sim_params['Tau_b'], nu_b=sim_params['nu_b'])
+    sigma_e, s_e, scale_param = initialize_individual_parameters(family_indices, X_train.shape[0], tau_e=sim_params['tau_e'], Tau_e=sim_params['Tau_e'], nu_e=sim_params['nu_e'])
 
 else:
-    y_train, X_train, beta, Z_train, sigma_b, s_b, b, sigma_e, s_e, scale_param, family_indices = simulate_fake_data(n_rows, n_cols, tau_b, Tau_b, nu_b, tau_e, Tau_e, nu_e, seed=10)
+    # fake data
+    random.seed(10)
+    n_rows = 500
+    n_cols = 10
+
+    # Generate fake data
+    y_train, X_train, beta, Z_train, sigma_b, s_b, b, sigma_e, s_e, scale_param, family_indices = simulate_fake_data(n_rows, n_cols, sim_params['tau_b'], sim_params['Tau_b'], sim_params['nu_b'], sim_params['tau_e'], sim_params['Tau_e'], sim_params['nu_e'], seed=10)
 
 if plot:
     plot_histogram(y_train, 'Dependent_variable')
@@ -129,7 +113,7 @@ print('Average variance for e: ', np.mean(sigma_e))
 print('Nonzero elements in Z:', len(Z_train.nonzero()[0]))
 
 # Put variables into a list
-params = [y_train, X_train, Z_train, s_b, sigma_b, tau_b, Tau_b, nu_b, s_e, sigma_e, tau_e, Tau_e, nu_e, family_indices]
+params = [y_train, X_train, Z_train, s_b, sigma_b, sim_params['tau_b'], sim_params['Tau_b'], sim_params['nu_b'], s_e, sigma_e, sim_params['tau_e'], sim_params['Tau_e'], sim_params['nu_e'], family_indices]
 
 # Create new folder for results
 newpath = cf.DATA_DIR + '/' + dt_now_string
@@ -142,7 +126,7 @@ if multiple_chains:
     print('Start multiple chains')
 
     results = []
-    results = multiprocess(n_processes, params, iters, n_chains)
+    results = multiprocess(n_processes, params, cf.ITERS, cf.NCHAINS)
 
     for chain, result in enumerate(results):
         bayes_estimates = result
@@ -156,14 +140,14 @@ if multiple_chains:
         # Write results into a csv file
         for i in range(len(bayes_estimates)):
             pd_data = pd.DataFrame(bayes_estimates[i])
-            file_name = newpath + '/' + cf.estimate_names[i] + '_chain_' + str(chain) + '.csv'
+            file_name = newpath + '/' + cpg_name + '_' + cf.estimate_names[i] + '_chain_' + str(chain) + '.csv'
             pd_data.to_csv(file_name, header=False, index=False)
 else:
     print('\n#####################################')
     print('Run one chain')
 
-    initial_value = 0.00001
-    bayes_estimates = run_one_chain(params, iters, initial_value)
+    initial_value = 0.001
+    bayes_estimates = run_one_chain(params, cf.ITERS, initial_value)
 
     # Write results into a csv file
     for i in range(len(bayes_estimates)):
@@ -176,7 +160,7 @@ else:
     for i in range(0, X_train.shape[1]):
 
         # Subset data
-        estimate = final_estimates[burn_in:, i]
+        estimate = final_estimates[CF:BURN_IN:, i]
         plt.plot(estimate[::20])
         plt.show()
 
