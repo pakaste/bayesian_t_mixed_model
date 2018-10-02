@@ -3,7 +3,7 @@ from numpy.random import normal
 from estimation.gibbs_sampler import run_one_chain
 
 
-def multiprocess(processes, params, iters, n_chains, normal_params=(0.0, 3.0)):
+def multiprocess(processes, params, iters, n_chains, normal_params=(0.0, 2.0)):
     """
         Uses multiprocessing for running multiple Gibbs sampler chains with different initial values.
         Parameters:
