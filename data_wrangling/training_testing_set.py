@@ -3,6 +3,8 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from settings import CONFIGS as cf
+
 
 def divide_into_training_and_testing(X, y, family_id):
     """
@@ -10,7 +12,7 @@ def divide_into_training_and_testing(X, y, family_id):
     """
 
     family_id = list(set(family_id))
-    family_train_idx = randint(0, len(family_id), size=450)
+    family_train_idx = randint(0, len(family_id), size=cf.TRAIN_SET)
 
     train_family_id = [family_id[i] for i in family_train_idx]
     mask_train = X['family_nb'].isin(train_family_id)
@@ -30,6 +32,7 @@ def divide_into_training_and_testing(X, y, family_id):
     y_test.reset_index(inplace=True, drop=True)
 
     return X_train, y_train, X_test, y_test
+
 
 def create_Z_matrix(data):
     Z_matrix = pd.get_dummies(data['family_nb'])
