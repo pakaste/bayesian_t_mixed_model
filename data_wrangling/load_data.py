@@ -8,7 +8,7 @@ import warnings
 from settings import CONFIGS as cf
 
 
-def load_data(path='', all_cpgs=False):
+def load_data(path='', cpg_name=None):
     """
         Loads CpG and phenotype data from a given path and returns two pandas dataframes.
     """
@@ -16,12 +16,15 @@ def load_data(path='', all_cpgs=False):
     cpg_names = cpg.index
     pheno = pd.read_csv(path + '/pheno_data_MZ.csv')
 
-    # If all CpGs aren't imported, pick randomly one CpG
-    if not all_cpgs:
+    # If all CpG name is not imported, pick randomly one CpG
+    print('CpG: ', cpg_name)
+    if cpg_name:
+        cpg = cpg.loc[cpg_name]
+
+    else:
         rand_int = randint(0, cpg.shape[0])
         cpg = cpg.iloc[rand_int]
         cpg_name = cpg_names[rand_int]
-        print('CpG: ', cpg_name)
 
     cpg_transpose = cpg.transpose()
 
