@@ -57,9 +57,11 @@ class Config(object):
     # Number of explanatory variables
     NVARS = 5
 
+    # Number of individuals in training set
+    TRAIN_SET = 730
 
     # GIBBS SAMPLER
-    ITERS = 50000
+    ITERS = 70000
     BURN_IN = 3000
     NCHAINS = 4 # Chains to be generated
 
