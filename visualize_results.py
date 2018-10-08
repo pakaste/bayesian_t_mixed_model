@@ -63,7 +63,7 @@ def visualize_results():
                 print('\nEstimated param for subset = ', round(np.nanmedian(subset), 5))
 
                 # Visualize the subset
-                plt.plot(ubset)
+                plt.plot(subset)
                 plt.show()
 
 
