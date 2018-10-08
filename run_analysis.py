@@ -5,7 +5,6 @@ os.environ['OPENBLAS_NUM_THREADS'] = '2'
 
 import collections
 import random
-import datetime
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,6 +22,7 @@ from visualization.plotting import plot_histogram
 from utils.hyperparameters import initialize_familial_parameters
 from utils.hyperparameters import initialize_individual_parameters
 from utils.parallel_processing import multiprocess
+from utils.general import get_datetime_now
 
 from estimation.gibbs_sampler import run_one_chain
 
@@ -37,19 +37,15 @@ n_processes = 4
 multiple_chains = True
 
 # Plot generated data
-plot = False
+plot = True
 
 # Get current datetime
-dt_now = datetime.datetime.now()
-year = str(dt_now.year)
-month = str(dt_now.month)
-day = str(dt_now.day)
-dt_now_string = year + '_' + month + '_' + day
+dt_now_string = get_datetime_now()
 
 if real:
     # Read in data
     print('Working directory: ', os.getcwd())
-    cpg, cpg_name, pheno = load_data('data', all_cpgs=False)
+    cpg, cpg_name, pheno = load_data('data', cpg_name='cg00002810')
     cpg = pd.DataFrame(cpg)
 
     # take cpg name
@@ -96,7 +92,7 @@ else:
     # fake data
     random.seed(10)
     n_rows = 500
-    n_cols = 10
+    n_cols = cf.NVARS
 
     # Generate fake data
     y_train, X_train, beta, Z_train, sigma_b, s_b, b, sigma_e, s_e, scale_param, family_indices = simulate_fake_data(n_rows, n_cols, sim_params['tau_b'], sim_params['Tau_b'], sim_params['nu_b'], sim_params['tau_e'], sim_params['Tau_e'], sim_params['nu_e'], seed=10)
@@ -140,7 +136,7 @@ if multiple_chains:
         # Write results into a csv file
         for i in range(len(bayes_estimates)):
             pd_data = pd.DataFrame(bayes_estimates[i])
-            file_name = newpath + '/' + cpg_name + '_' + cf.estimate_names[i] + '_chain_' + str(chain) + '.csv'
+            file_name = newpath + '/' + cpg_name + '_' + cf.estimate_names[i] + '_chain_' + str(chain) + '_initval_' + str(initial_value) +  '.csv'
             pd_data.to_csv(file_name, header=False, index=False)
 else:
     print('\n#####################################')
@@ -160,7 +156,7 @@ else:
     for i in range(0, X_train.shape[1]):
 
         # Subset data
-        estimate = final_estimates[CF:BURN_IN:, i]
+        estimate = final_estimates[cf.BURN_IN:, i]
         plt.plot(estimate[::20])
         plt.show()
 
