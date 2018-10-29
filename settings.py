@@ -61,7 +61,7 @@ class Config(object):
     TRAIN_SET = 730
 
     # GIBBS SAMPLER
-    ITERS = 70000
+    ITERS = 60000
     BURN_IN = 3000
     NCHAINS = 4 # Chains to be generated
 
