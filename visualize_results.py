@@ -22,8 +22,13 @@ import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import plotly.offline as py
+import plotly.graph_objs as go
 
+from utils.general import get_paths
+from utils.general import get_filename
 from settings import CONFIGS as cf
+
 
 
 def visualize_results():
@@ -36,35 +41,71 @@ def visualize_results():
     args = vars(ap.parse_args())
 
     print('Getting results from folder {}'.format(args["folder"]))
-
-    files = []
     path = os.path.join(cf.CURRENT_DIR, args["folder"])
+    print(path)
 
-    if args["chain"]:
-        chain = 'chain_' + str(args["chain"])
-    else:
-        chain = 'chain_0'
+    #if args["chain"]:
+    #    chain = 'chain_' + str(args["chain"])
+    #else:
+    #    chain = 'chain_0'
 
-    for i in os.listdir(path):
-        if os.path.isfile(os.path.join(path, i)) and chain in i:
-            file_path = os.path.join(path, i)
-            files.append(file_path)
+    chain_ids = [0, 1, 2, 3]
+            # Read in files and plot the results
+    data = []
+    initial_values = [1.4966943391686316,
+                        0.4919518052559649,
+                        0.8615640710975296,
+                        0.13052001985399436]
 
-    # Read in files and plot the results
-    for file in files:
-        print(file)
-        df = pd.read_csv(file, header=None)
+    for idx, chain_id in enumerate(chain_ids):
+        chain = 'chain_' + str(chain_id)
 
-        if 'coefficients' in file:
-            for i in range(0, 10):
-                # Subset data
-                estimate = df.loc[cf.BURN_IN:, i]
-                subset = estimate[::20]  # 0.00320705699501159
-                print('\nEstimated param for subset = ', round(np.nanmedian(subset), 5))
+        for file in get_paths(path, typelist=['csv'], verbose=False):
+            print('file', file)
+            cpg_name = get_filename(file).split('_')[0]
 
-                # Visualize the subset
-                plt.plot(subset)
-                plt.show()
+            if chain in file:
+                print(file)
+                if '0' in file:
+                    val = round(initial_values[idx], 2)
+                elif '1' in file:
+                    val = round(initial_values[idx], 2)
+                elif '2' in file:
+                    val = round(initial_values[idx], 2)
+                else:
+                    val = round(initial_values[idx], 2)
+
+                df = pd.read_csv(file, header=None)
+
+                if 'coefficients' in file:
+                    i = 1   # age
+
+                    # Subset data
+                    estimate = df.loc[cf.BURN_IN:, i]
+                    subset = estimate[::20]  # 0.00320705699501159
+                    print('\nEstimated param (median) for subset = ', round(np.nanmedian(subset), 5))
+                    print('\nEstimated param (mean) for subset = ', round(np.nanmean(subset), 5))
+                    print('\nEstimated param (std) for subset = ', round(np.nanstd(subset), 5))
+
+                    # Create iplotly
+                    trace1 = go.Scatter(
+                        x = np.array(range(len(subset)))*20,
+                        y = subset,
+                        mode = 'lines+markers',
+                        name = 'aloitusarvo: ' + str(val)
+                    )
+
+                    data.append(trace1)
+
+    # Edit the layout
+    layout = dict(title = 'Iän kulmakertoimet ' + cpg_name + ':lle eri aloitusarvoilla',
+                  xaxis = dict(title = 'iteraatio'),
+                  yaxis = dict(title = 'kulmakerroin'),
+                  )
+
+    fig = dict(data=data, layout=layout)
+    fig = go.Figure(data=data, layout=layout)
+    py.plot(fig,show_link = False, image_width=1200, image_height=800)
 
 
 
